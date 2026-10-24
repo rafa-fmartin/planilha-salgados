@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planilha dos Salgados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: folha de planilha — resumo no topo, tabela de produtos (colunas = produtos), depois custos de produção e o mês da empresa lado a lado */
+:root {
+  --bg: #f5f7f5;
+  --sheet: #ffffff;
+  --fg: #1b2420;
+  --muted: #5f6d66;
+  --line: #dde4df;
+  --head: #eef2ef;
+  --accent: #1f7a4d;
+  --accent-bg: #e3f3ea;
+  --input: #fff6d6;
+  --input-line: #e6cf7a;
+  --good: #1f7a4d;
+  --good-bg: #e3f3ea;
+  --warn: #9a5b00;
+  --warn-bg: #fdf0db;
+  --bad: #b3261e;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111613; --sheet: #182019; --fg: #e4ebe6; --muted: #9aaaa1; --line: #2b3630; --head: #1f2923;
+  --accent: #5fc893; --accent-bg: #1d3a2a; --input: #3a3215; --input-line: #7a6a2a;
+  --good: #5fc893; --good-bg: #1d3a2a; --warn: #e8a640; --warn-bg: #3d2e12; --bad: #f08a80;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111613; --sheet: #182019; --fg: #e4ebe6; --muted: #9aaaa1; --line: #2b3630; --head: #1f2923;
+  --accent: #5fc893; --accent-bg: #1d3a2a; --input: #3a3215; --input-line: #7a6a2a;
+  --good: #5fc893; --good-bg: #1d3a2a; --warn: #e8a640; --warn-bg: #3d2e12; --bad: #f08a80;
+  color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0 }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px }
+header { display: grid; gap: 6px }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(1.6rem, 4vw, 2.2rem); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
+header p { margin: 0; color: var(--muted); max-width: 70ch }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted) }
+.legend span { display: inline-flex; align-items: center; gap: 6px }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--input-line); background: var(--input) }
+.sw.calc { background: var(--head); border-color: var(--line) }
+.sw.ex { outline: 1px dashed var(--warn); outline-offset: -4px }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start }
+@media (max-width: 820px) { .grid { grid-template-columns: 1fr } }
+.sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; min-width: 0 }
+.sheet h2 { font-family: var(--display); font-weight: 600; font-size: 1.05rem; margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--head) }
+.group { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 12px 14px 6px; font-weight: 600 }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 128px; border-top: 1px solid var(--line); align-items: stretch }
+.row label, .row .k { padding: 9px 14px; min-width: 0 }
+small { display: block; color: var(--muted); font-size: 12.5px; font-weight: 400 }
+.cell { border-left: 1px solid var(--line); display: flex; align-items: center }
+input { width: 100%; height: 100%; border: 0; background: var(--input); color: var(--fg); font-family: var(--mono); font-size: 14px;
+  text-align: right; padding: 9px 12px; font-variant-numeric: tabular-nums; outline: none; box-shadow: inset 0 0 0 1px var(--input-line) }
+input.ex { font-style: italic; outline: 1px dashed var(--warn); outline-offset: -4px }
+input:focus-visible { box-shadow: inset 0 0 0 2px var(--accent) }
+output { display: block; width: 100%; text-align: right; padding: 9px 12px; font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; background: var(--head) }
+.row.total .k { font-weight: 600 }
+.row.total output { font-weight: 600; color: var(--accent) }
+
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line) }
+@media (max-width: 700px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.tile { background: var(--sheet); padding: 14px; display: grid; gap: 2px; align-content: start }
+.tile .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted) }
+.tile .val { font-family: var(--display); font-weight: 800; font-size: 1.6rem; font-variant-numeric: tabular-nums }
+.tile .sub { font-size: 12.5px; color: var(--muted) }
+.verdict { margin: 14px; padding: 12px 14px; border-radius: 6px; border: 1px solid var(--line); display: grid; gap: 4px }
+.verdict strong { font-family: var(--display); font-weight: 600 }
+.verdict.ok { border-color: var(--good) } .verdict.ok strong { color: var(--good) }
+.verdict.mid { border-color: var(--warn) } .verdict.mid strong { color: var(--warn) }
+.verdict.no { border-color: var(--bad) } .verdict.no strong { color: var(--bad) }
+
+.tablewrap { overflow-x: auto }
+table.skus { border-collapse: collapse; width: 100%; min-width: 900px; font-size: 14px }
+.skus th, .skus td { border-top: 1px solid var(--line); border-left: 1px solid var(--line); padding: 0; vertical-align: middle }
+.skus thead th { background: var(--head); font-weight: 600; padding: 8px 10px; text-align: center; font-family: var(--display) }
+.skus thead th.sub { font-family: var(--body); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted) }
+.skus th.rowlbl { text-align: left; position: sticky; left: 0; z-index: 1; background: var(--sheet); padding: 8px 12px; font-weight: 400; min-width: 210px; border-left: 0 }
+.skus thead th.rowlbl { background: var(--head) }
+.skus tr.total th.rowlbl { font-weight: 600 }
+.skus tr.total output { font-weight: 600 }
+.skus tr.sec th { background: var(--sheet); text-align: left; padding: 12px 12px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; border-left: 0 }
+.skus tr.sec th span { position: sticky; left: 12px }
+.skus td.best output { background: var(--accent-bg); color: var(--accent); font-weight: 600 }
+.skus output.neg { color: var(--bad) }
+.chipcell { display: flex; justify-content: flex-end; padding: 7px 10px; background: var(--head) }
+.chip { display: inline-block; font: 600 12px var(--body); padding: 2px 9px; border-radius: 999px; background: var(--line); color: var(--muted); white-space: nowrap }
+.chip.ok { background: var(--good-bg); color: var(--good) }
+.chip.warn { background: var(--warn-bg); color: var(--warn) }
+.tablenote { padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line) }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; padding: 14px }
+button { font: 600 14px var(--body); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--sheet); color: var(--fg); cursor: pointer }
+button:hover { border-color: var(--accent) } button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.note { font-size: 13px; color: var(--muted); max-width: 75ch; margin: 0 }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0) }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Planilha dos Salgados</h1>
+    <p>Preencha as células amarelas. Cada coluna da tabela é um produto: bandeja, meio cento e cento, congelado ou frito. Os resultados se atualizam na hora.</p>
+    <div class="legend">
+      <span><i class="sw"></i>você preenche</span>
+      <span><i class="sw ex"></i>estimativa ou exemplo, troque pelo valor real</span>
+      <span><i class="sw calc"></i>calculado</span>
+    </div>
+  </header>
+
+  <section class="sheet" aria-label="Resumo do mês" aria-live="polite">
+    <div class="summary">
+      <div class="tile"><span class="lbl">Lucro da operação</span><span class="val" id="o_lucroMes">–</span><span class="sub">no mês, depois dos custos fixos</span></div>
+      <div class="tile"><span class="lbl">Seu salário</span><span class="val" id="o_pl">–</span><span class="sub" id="o_plSub"></span></div>
+      <div class="tile"><span class="lbl">Sobra no caixa</span><span class="val" id="o_caixa">–</span><span class="sub">depois de pagar você</span></div>
+      <div class="tile"><span class="lbl">Ganho por hora</span><span class="val" id="o_vh">–</span><span class="sub" id="o_vhSub"></span></div>
+    </div>
+    <div class="verdict" id="verdict"><strong id="v_t"></strong><span id="v_d"></span></div>
+  </section>
+
+  <section class="sheet" aria-label="Produtos">
+    <h2>Produtos</h2>
+    <div class="tablewrap"><table class="skus" id="skuTable"></table></div>
+    <p class="tablenote">Em destaque, o produto que mais rende por hora de trabalho. O preço sugerido é o que cobre os custos do pedido e as horas gastas nele, valendo cada hora o "custo da sua hora" calculado ao lado.</p>
+  </section>
+
+  <div class="grid">
+    <section class="sheet" aria-label="Custos de produção">
+      <h2>Custos de produção</h2>
+
+      <div class="group">Lote de referência</div>
+      <div class="row"><label for="loteQtd">Salgados no lote</label><div class="cell"><input id="loteQtd" inputmode="decimal" value="70"></div></div>
+      <div class="row"><label for="ingred">Massa e recheio do lote (R$)</label><div class="cell"><input id="ingred" inputmode="decimal" value="26,80"></div></div>
+      <div class="row"><label for="horas">Horas para produzir o lote<small>do início à embalagem, sem fritar</small></label><div class="cell"><input id="horas" inputmode="decimal" value="2"></div></div>
+      <div class="row"><label for="gasPreco">Botijão de gás (R$)</label><div class="cell"><input id="gasPreco" class="ex" inputmode="decimal" value="120,00"></div></div>
+      <div class="row"><label for="gasRende">Lotes por botijão<small>só a masseira</small></label><div class="cell"><input id="gasRende" class="ex" inputmode="decimal" value="40"></div></div>
+      <div class="row"><label for="freezer">Energia do freezer por lote (R$)</label><div class="cell"><input id="freezer" class="ex" inputmode="decimal" value="2,00"></div></div>
+
+      <div class="group">Embalagem</div>
+      <div class="row"><label for="isoporPct">Pacote de isopor (R$)</label><div class="cell"><input id="isoporPct" class="ex" inputmode="decimal" value="25,00"></div></div>
+      <div class="row"><label for="isoporQtd">Isopores no pacote</label><div class="cell"><input id="isoporQtd" class="ex" inputmode="decimal" value="50"></div></div>
+      <div class="row"><label for="filmePreco">Rolo de papel filme (R$)</label><div class="cell"><input id="filmePreco" class="ex" inputmode="decimal" value="10,50"></div></div>
+      <div class="row"><label for="filmeRende">Bandejas que o rolo rende</label><div class="cell"><input id="filmeRende" class="ex" inputmode="decimal" value="50"></div></div>
+
+      <div class="group">Fritura (só nos fritos)</div>
+      <div class="row"><label for="oleo">Óleo por cento frito (R$)<small>parte do óleo gasta e trocada</small></label><div class="cell"><input id="oleo" class="ex" inputmode="decimal" value="6,00"></div></div>
+      <div class="row"><label for="gasFrit">Gás da fritura por cento (R$)</label><div class="cell"><input id="gasFrit" class="ex" inputmode="decimal" value="2,00"></div></div>
+      <div class="row"><label for="horasFrit">Horas de fritura por cento</label><div class="cell"><input id="horasFrit" class="ex" inputmode="decimal" value="0,75"></div></div>
+
+      <div class="group">Maquininha</div>
+      <div class="row"><label for="taxa">Taxa da maquininha (%)<small>crédito, pior cenário</small></label><div class="cell"><input id="taxa" inputmode="decimal" value="5"></div></div>
+    </section>
+
+    <div style="display:grid;gap:20px;min-width:0">
+      <section class="sheet" aria-label="Empresa e você">
+        <h2>Empresa e você</h2>
+        <div class="group">Custos fixos da empresa (por mês)</div>
+        <div class="row"><label for="das">DAS do MEI (R$)</label><div class="cell"><input id="das" inputmode="decimal" value="82,05"></div></div>
+        <div class="row"><label for="aluguel">Aluguel do espaço (R$)<small>0 se produz em casa</small></label><div class="cell"><input id="aluguel" inputmode="decimal" value="0,00"></div></div>
+        <div class="row"><label for="funcSal">Salário do funcionário (R$)<small>0 se não tem</small></label><div class="cell"><input id="funcSal" inputmode="decimal" value="0,00"></div></div>
+        <div class="row"><label for="funcEnc">Encargos e provisões do funcionário (%)<small>MEI: INSS 3% + FGTS 8% + 13º e férias ≈ 33%</small></label><div class="cell"><input id="funcEnc" inputmode="decimal" value="33"></div></div>
+        <div class="row"><label for="outros">Outros fixos (R$)<small>internet, contador, divulgação…</small></label><div class="cell"><input id="outros" inputmode="decimal" value="0,00"></div></div>
+        <div class="group">Seu salário</div>
+        <div class="row"><label for="prolabore">Pró-labore por mês (R$)<small>o que você tira para você, separado do caixa</small></label><div class="cell"><input id="prolabore" class="ex" inputmode="decimal" value="150,00"></div></div>
+      </section>
+
+      <section class="sheet" aria-label="O mês da empresa">
+        <h2>O mês da empresa</h2>
+        <div class="row"><span class="k">Faturamento</span><div class="cell"><output id="o_fat"></output></div></div>
+        <div class="row"><span class="k">Custos dos pedidos</span><div class="cell"><output id="o_cvMes"></output></div></div>
+        <div class="row"><span class="k">Custo do funcionário com encargos</span><div class="cell"><output id="o_func"></output></div></div>
+        <div class="row"><span class="k">Custos fixos totais</span><div class="cell"><output id="o_fixos"></output></div></div>
+        <div class="row total"><span class="k">Lucro da operação</span><div class="cell"><output id="o_op"></output></div></div>
+        <div class="row"><span class="k">Pró-labore (seu salário)</span><div class="cell"><output id="o_plRow"></output></div></div>
+        <div class="row total"><span class="k">Sobra no caixa da empresa</span><div class="cell"><output id="o_caixaRow"></output></div></div>
+        <div class="group">Metas</div>
+        <div class="row"><span class="k">Horas de trabalho no mês</span><div class="cell"><output id="o_horas"></output></div></div>
+        <div class="row total"><span class="k">Custo da sua hora<small>quanto cada hora precisa render para pagar os fixos e o seu salário</small></span><div class="cell"><output id="o_custoHora"></output></div></div>
+        <div class="row"><span class="k">Faturamento para pagar os custos fixos<small>com a mistura de produtos atual</small></span><div class="cell"><output id="o_pe"></output></div></div>
+        <div class="row"><span class="k">Faturamento para pagar também seu salário</span><div class="cell"><output id="o_peSal"></output></div></div>
+        <div class="actions"><button type="button" id="reset">Voltar aos valores iniciais</button></div>
+      </section>
+    </div>
+  </div>
+
+  <p class="note">Custos fixos e seu salário são divididos pelas horas trabalhadas no mês: quanto mais você vende, menor o custo de cada hora e menor o preço sugerido. A sobra no caixa é o que fica na empresa para reserva, equipamentos e imprevistos. O que você digitar fica salvo só neste navegador.</p>
+</div>
+
+<script>
+(function () {
+  var KEY = "planilha-salgados-v1";
+  var brlF = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  var pctF = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
+  function brl(v) { return brlF.format(v); }
+  function $(id) { return document.getElementById(id); }
+  function parse(v) {
+    var s = String(v).trim().replace(/\s/g, "");
+    if (s.indexOf(",") > -1) s = s.replace(/\./g, "").replace(",", ".");
+    var n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+  }
+  function num(id) { return parse($(id).value); }
+  function div(a, b) { return b > 0 ? a / b : 0; }
+  function set(id, txt) { var e = $(id); if (e) e.textContent = txt; }
+  function fmtH(x) { return x.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " h"; }
+
+  var SKUS = [
+    { k: "bC", nome: "Bandeja", t: "Congelado", f: false, d: { q: 10,  p: 15,  b: 1,  x: 0, n: 28 }, ex: [] },
+    { k: "bF", nome: "Bandeja", t: "Frito",     f: true,  d: { q: 10,  p: 18,  b: 1,  x: 0, n: 0 },  ex: ["p"] },
+    { k: "mC", nome: "Meio cento", t: "Congelado", f: false, d: { q: 50, p: 70, b: 5, x: 0, n: 0 }, ex: ["p", "b"] },
+    { k: "mF", nome: "Meio cento", t: "Frito",     f: true,  d: { q: 50, p: 85, b: 5, x: 0, n: 0 }, ex: ["p", "b"] },
+    { k: "cC", nome: "Cento", t: "Congelado", f: false, d: { q: 100, p: 135, b: 10, x: 0, n: 0 }, ex: ["p", "b"] },
+    { k: "cF", nome: "Cento", t: "Frito",     f: true,  d: { q: 100, p: 160, b: 10, x: 0, n: 0 }, ex: ["p", "b"] }
+  ];
+  function nomeSku(s) { return s.nome + " " + (s.t === "Frito" ? (s.nome === "Bandeja" ? "frita" : "frito") : (s.nome === "Bandeja" ? "congelada" : "congelado")); }
+
+  var IN_ROWS = [
+    ["q", "Salgados no pedido", ""],
+    ["p", "Preço de venda (R$)", ""],
+    ["b", "Bandejas de isopor", ""],
+    ["x", "Outra embalagem (R$)", "caixa, guardanapo, sacola"],
+    ["n", "Pedidos por mês", ""]
+  ];
+  var OUT_ROWS = [
+    { sec: "Custos por pedido" },
+    ["massa", "Massa e recheio"], ["gas", "Gás da masseira e freezer"], ["fr", "Fritura: óleo e gás"],
+    ["emb", "Embalagem"], ["taxa", "Taxa da maquininha"], ["vc", "Custo total do pedido", "", 1],
+    { sec: "Resultado por pedido" },
+    ["mc", "Margem por pedido", "", 1], ["mcp", "Margem (%)"], ["h", "Horas de trabalho"],
+    ["mch", "Margem por hora de trabalho", "", 1], ["pu", "Preço por salgado"], ["cu", "Custo por salgado"],
+    ["sug", "Preço sugerido", "paga custos, fixos e seu salário", 1], ["st", "Preço atual", "comparado ao sugerido", 0, 1],
+    { sec: "No mês" },
+    ["fm", "Faturamento"], ["mm", "Margem"], ["hm", "Horas de trabalho"]
+  ];
+
+  function lbl(r) { return r[1] + (r[2] ? "<small>" + r[2] + "</small>" : ""); }
+  function fmtIn(f, v) { return (f === "p" || f === "x") ? v.toFixed(2).replace(".", ",") : String(v); }
+
+  var html = '<thead><tr><th class="rowlbl" rowspan="2"><span class="sr">Item</span></th>' +
+    '<th colspan="2">Bandeja</th><th colspan="2">Meio cento</th><th colspan="2">Cento</th></tr><tr>';
+  SKUS.forEach(function (s) { html += '<th class="sub">' + s.t + '</th>'; });
+  html += '</tr></thead><tbody><tr class="sec"><th colspan="7"><span>Você preenche</span></th></tr>';
+  IN_ROWS.forEach(function (r) {
+    html += '<tr><th class="rowlbl" scope="row">' + lbl(r) + '</th>';
+    SKUS.forEach(function (s) {
+      var id = "s_" + r[0] + "_" + s.k;
+      html += '<td><input id="' + id + '" inputmode="decimal" aria-label="' + r[1] + ', ' + nomeSku(s) + '" value="' + fmtIn(r[0], s.d[r[0]]) + '"' +
+        (s.ex.indexOf(r[0]) > -1 ? ' class="ex"' : '') + '></td>';
+    });
+    html += '</tr>';
+  });
+  OUT_ROWS.forEach(function (r) {
+    if (r.sec) { html += '<tr class="sec"><th colspan="7"><span>' + r.sec + '</span></th></tr>'; return; }
+    html += '<tr' + (r[3] ? ' class="total"' : '') + '><th class="rowlbl" scope="row">' + lbl(r) + '</th>';
+    SKUS.forEach(function (s) {
+      var id = "o_" + r[0] + "_" + s.k;
+      html += r[4] ? '<td><div class="chipcell" id="' + id + '"></div></td>' : '<td id="td_' + r[0] + '_' + s.k + '"><output id="' + id + '"></output></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  $("skuTable").innerHTML = html;
+
+  var inputs = Array.prototype.slice.call(document.querySelectorAll("input"));
+  var defaults = {};
+
+  function calc() {
+    var lote = num("loteQtd"), ingred = num("ingred"), hLote = num("horas");
+    var gasLote = div(num("gasPreco"), num("gasRende")) + num("freezer");
+    var bandCusto = div(num("isoporPct"), num("isoporQtd")) + div(num("filmePreco"), num("filmeRende"));
+    var oleo = num("oleo"), gasF = num("gasFrit"), hF = num("horasFrit"), t = num("taxa") / 100;
+    var func = num("funcSal") * (1 + num("funcEnc") / 100);
+    var fixos = num("das") + num("aluguel") + func + num("outros");
+    var pl = num("prolabore");
+
+    var R = {}, fat = 0, vcT = 0, mcT = 0, hT = 0;
+    SKUS.forEach(function (s) {
+      function g(f) { return num("s_" + f + "_" + s.k); }
+      var q = g("q"), p = g("p"), n = g("n"), k = div(q, lote);
+      var r = { q: q, p: p, n: n };
+      r.massa = ingred * k;
+      r.gas = gasLote * k;
+      r.fr = s.f ? (oleo + gasF) * q / 100 : 0;
+      r.emb = g("b") * bandCusto + g("x");
+      r.taxa = p * t;
+      r.vcSem = r.massa + r.gas + r.fr + r.emb;
+      r.vc = r.vcSem + r.taxa;
+      r.mc = p - r.vc;
+      r.h = hLote * k + (s.f ? hF * q / 100 : 0);
+      r.mch = div(r.mc, r.h);
+      fat += n * p; vcT += n * r.vc; mcT += n * r.mc; hT += n * r.h;
+      R[s.k] = r;
+    });
+
+    var lucroOp = mcT - fixos, caixa = lucroOp - pl;
+    var custoHora = div(fixos + pl, hT);
+    var best = null;
+    SKUS.forEach(function (s) { var r = R[s.k]; if (r.h > 0 && (best === null || r.mch > R[best].mch)) best = s.k; });
+
+    var abaixo = [], prejuizo = [];
+    SKUS.forEach(function (s) {
+      var r = R[s.k], k = s.k;
+      function o(f, v) { set("o_" + f + "_" + k, v); }
+      o("massa", brl(r.massa)); o("gas", brl(r.gas)); o("fr", s.f ? brl(r.fr) : "–");
+      o("emb", brl(r.emb)); o("taxa", brl(r.taxa)); o("vc", brl(r.vc));
+      o("mc", brl(r.mc)); $("o_mc_" + k).classList.toggle("neg", r.mc < 0);
+      o("mcp", r.p > 0 ? pctF.format(r.mc / r.p) : "–");
+      o("h", fmtH(r.h));
+      o("mch", r.h > 0 ? brl(r.mch) + "/h" : "–");
+      $("td_mch_" + k).classList.toggle("best", k === best);
+      o("pu", r.q > 0 ? brl(r.p / r.q) : "–"); o("cu", r.q > 0 ? brl(r.vc / r.q) : "–");
+      o("fm", brl(r.n * r.p)); o("mm", brl(r.n * r.mc)); o("hm", fmtH(r.n * r.h));
+      if (r.mc <= 0 && r.p > 0) prejuizo.push(nomeSku(s));
+      var st = $("o_st_" + k);
+      if (hT > 0 && t < 1) {
+        var sug = (r.vcSem + r.h * custoHora) / (1 - t);
+        o("sug", brl(sug));
+        if (r.p + 0.005 >= sug) st.innerHTML = '<span class="chip ok">no ponto</span>';
+        else { st.innerHTML = '<span class="chip warn">' + brl(sug - r.p) + ' abaixo</span>'; abaixo.push(nomeSku(s)); }
+      } else { o("sug", "–"); st.innerHTML = '<span class="chip">sem vendas no mês</span>'; }
+    });
+
+    set("o_lucroMes", brl(lucroOp));
+    set("o_pl", brl(pl));
+    set("o_plSub", hT > 0 ? brl(pl / hT) + " por hora trabalhada" : "");
+    set("o_caixa", brl(caixa));
+    $("o_caixa").style.color = caixa < 0 ? "var(--bad)" : "";
+    set("o_vh", hT > 0 ? brl(div(lucroOp, hT)) : "–");
+    set("o_vhSub", hT > 0 ? "se todo o lucro fosse para você (" + fmtH(hT) + "/mês)" : "");
+
+    set("o_fat", brl(fat)); set("o_cvMes", "−" + brl(vcT)); set("o_func", "−" + brl(func));
+    set("o_fixos", "−" + brl(fixos)); set("o_op", brl(lucroOp)); set("o_plRow", "−" + brl(pl)); set("o_caixaRow", brl(caixa));
+    set("o_horas", fmtH(hT));
+    set("o_custoHora", hT > 0 ? brl(custoHora) + "/h" : "–");
+    var mPct = div(mcT, fat);
+    set("o_pe", mPct > 0 ? brl(fixos / mPct) : "–");
+    set("o_peSal", mPct > 0 ? brl((fixos + pl) / mPct) : "–");
+
+    function lista(a) { return a.length > 1 ? a.slice(0, -1).join(", ") + " e " + a[a.length - 1] : a[0]; }
+    var extra = prejuizo.length ? " Atenção: " + lista(prejuizo) + (prejuizo.length > 1 ? " dão" : " dá") + " prejuízo a cada venda." : "";
+    var v = $("verdict"); v.className = "verdict";
+    if (hT <= 0) { set("v_t", "Preencha os pedidos por mês"); set("v_d", "Coloque quantos pedidos de cada produto você vende para ver o mês da empresa." + extra); }
+    else if (lucroOp < 0) { v.classList.add("no"); set("v_t", "A empresa não paga os custos fixos"); set("v_d", "Os pedidos do mês deixam " + brl(mcT) + " de margem, mas os custos fixos são " + brl(fixos) + "." + extra); }
+    else if (caixa < 0) { v.classList.add("mid"); set("v_t", "Paga a empresa, mas não o seu salário"); set("v_d", "Faltam " + brl(-caixa) + " por mês para tirar " + brl(pl) + "." + (abaixo.length ? " Abaixo do preço sugerido: " + lista(abaixo) + "." : " Venda mais ou reduza custos.") + extra); }
+    else { v.classList.add("ok"); set("v_t", "Paga tudo e ainda sobra"); set("v_d", "Cobre os custos, o seu salário e deixa " + brl(caixa) + " no caixa por mês." + (abaixo.length ? " Mesmo assim, " + lista(abaixo) + (abaixo.length > 1 ? " estão" : " está") + " abaixo do preço sugerido." : "") + extra); }
+
+    try { var s = {}; inputs.forEach(function (el) { s[el.id] = el.value; }); localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+  }
+
+  inputs.forEach(function (el) {
+    defaults[el.id] = el.value;
+    el.dataset.ex = el.classList.contains("ex") ? "1" : "";
+    el.addEventListener("input", function () { el.classList.remove("ex"); calc(); });
+  });
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved) inputs.forEach(function (el) {
+      if (saved[el.id] != null) { el.value = saved[el.id]; if (el.value !== defaults[el.id]) el.classList.remove("ex"); }
+    });
+  } catch (e) {}
+  $("reset").addEventListener("click", function () {
+    inputs.forEach(function (el) { el.value = defaults[el.id]; if (el.dataset.ex) el.classList.add("ex"); });
+    calc();
+  });
+  calc();
+})();
+</script>
+
+</body>
+</html>
